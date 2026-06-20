@@ -9,7 +9,8 @@ import {
   Store,
   User,
 } from 'lucide-react';
-import { useApp, type Route } from '../context/AppContext';
+import { useApp } from '../context/AppContext.jsx';
+import type { Route } from './routeTypes';
 
 function useClickOutside<T extends HTMLElement>(onOutside: () => void) {
   const ref = useRef<T>(null);
@@ -37,7 +38,7 @@ export function Navbar() {
     { label: 'Salon Studio', route: { name: 'vendor' }, icon: Store, ownerOnly: true },
   ];
 
-  const visibleLinks = navLinks.filter((l) => !l.ownerOnly || role === 'owner');
+  const visibleLinks = navLinks.filter((l) => !l.ownerOnly || role === 'partner');
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink-100 bg-white/80 backdrop-blur-xl">
@@ -115,8 +116,8 @@ export function Navbar() {
                   </div>
                 </button>
                 <button
-                  onClick={() => { setRole('owner'); setRoleOpen(false); }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-ink-50 ${role === 'owner' ? 'bg-brand-50' : ''}`}
+                  onClick={() => { setRole('partner'); setRoleOpen(false); }}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-ink-50 ${role === 'partner' ? 'bg-brand-50' : ''}`}
                 >
                   <Store className="h-4 w-4 text-brand-600" />
                   <div>

@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Calendar, CheckCircle2, Clock, Eye, MapPin, Plus, XCircle } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { SALONS } from '../data/salons';
+import { useApp } from '../context/AppContext.jsx';
+import { adaptSalons } from '../data/adapter';
 
 type Tab = 'upcoming' | 'past';
 
 export function CustomerDashboard() {
-  const { bookings, navigate, cancelBooking } = useApp();
+  const { bookings, navigate, cancelBooking, salons } = useApp();
+  const SALONS = useMemo(() => adaptSalons(salons), [salons]);
   const [tab, setTab] = useState<Tab>('upcoming');
 
   const upcoming = bookings.filter((b) => b.status === 'upcoming' || b.status === 'cancelled');
@@ -75,7 +76,7 @@ export function CustomerDashboard() {
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-ink-400">Total</div>
-                        <div className="font-bold text-ink-900">₹{b.total.toLocaleString('en-IN')}</div>
+                        <div className="font-bold text-ink-900">₹{(b.price ?? 0).toLocaleString('en-IN')}</div>
                       </div>
                     </div>
 
@@ -88,9 +89,7 @@ export function CustomerDashboard() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      {b.serviceNames.map((n) => (
-                        <span key={n} className="chip bg-ink-100 text-ink-600">{n}</span>
-                      ))}
+                      <span className="chip bg-ink-100 text-ink-600">{b.serviceTitle}</span>
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">

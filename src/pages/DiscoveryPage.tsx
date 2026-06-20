@@ -1,15 +1,20 @@
 import { useMemo, useState } from 'react';
 import { Filter, Search, SlidersHorizontal, X } from 'lucide-react';
-import { useApp, type Route } from '../context/AppContext';
-import { SALONS } from '../data/salons';
-import type { Neighborhood, ServiceCategory } from '../types';
+import { useApp } from '../context/AppContext.jsx';
+import { adaptSalons } from '../data/adapter';
+import type { ServiceCategory } from '../types';
 import { SalonCard } from '../components/SalonCard';
+import type { Route } from '../components/routeTypes';
 
-const NEIGHBORHOODS: Neighborhood[] = ['Bandra', 'Andheri West', 'Lower Parel', 'Juhu', 'Colaba', 'Powai'];
 const CATEGORIES: ServiceCategory[] = ['Hair', 'Skin', 'Nails', 'Makeup', 'Spa'];
 
 export function DiscoveryPage() {
-  const { route, navigate } = useApp();
+  const { route, navigate, salons } = useApp();
+  const SALONS = useMemo(() => adaptSalons(salons), [salons]);
+  const NEIGHBORHOODS = useMemo(
+    () => [...new Set(SALONS.map((s) => s.neighborhood))].sort(),
+    [SALONS],
+  );
   const initial = route.name === 'search' ? route : { query: '', neighborhood: '' };
 
   const [query, setQuery] = useState(initial.query ?? '');
@@ -46,7 +51,7 @@ export function DiscoveryPage() {
       return sort === 'price-low' ? aMin - bMin : bMin - aMin;
     });
     return list;
-  }, [query, neighborhood, categories, minRating, priceMax, sort]);
+  }, [SALONS, query, neighborhood, categories, minRating, priceMax, sort]);
 
   const filterPanel = (
     <div className="space-y-6">

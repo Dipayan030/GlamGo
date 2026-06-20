@@ -10,23 +10,21 @@ import {
   ShoppingBag,
   Trash2,
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { SALONS } from '../data/salons';
+import { useApp } from '../context/AppContext.jsx';
+import { adaptSalons } from '../data/adapter';
 
 const TIME_SLOTS = [
   '10:30 AM', '11:30 AM', '12:30 PM', '1:30 PM',
   '3:00 PM', '4:00 PM', '5:00 PM', '6:30 PM', '7:30 PM',
 ];
 
-function formatDay(d: Date) {
-  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' });
-}
 function formatFull(d: Date) {
   return d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 export function BookingFlow() {
-  const { cart, removeFromCart, cartTotal, clearCart, navigate, placeBooking } = useApp();
+  const { cart, removeFromCart, cartTotal, clearCart, navigate, placeBooking, salons } = useApp();
+  const SALONS = useMemo(() => adaptSalons(salons), [salons]);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedDate, setSelectedDate] = useState<number>(2); // index into 14-day window
   const [selectedSlot, setSelectedSlot] = useState<string>('');
@@ -120,15 +118,18 @@ export function BookingFlow() {
     setTimeout(() => {
       salonGroups.forEach(([salonId, items]) => {
         const s = SALONS.find((x) => x.id === salonId);
-        placeBooking({
-          salonId,
-          salonName: s?.name ?? 'Salon',
-          serviceIds: items.map((i) => i.service.id),
-          serviceNames: items.map((i) => i.service.name),
-          total: items.reduce((sum, i) => sum + i.service.price, 0),
-          date: formattedDate,
-          timeSlot: selectedSlot,
-          customerName: 'You',
+        items.forEach((i) => {
+          placeBooking({
+            salonId,
+            salonName: s?.name ?? 'Salon',
+            serviceId: i.service.id,
+            serviceTitle: i.service.name,
+            price: i.service.price,
+            duration: `${i.service.durationMin} mins`,
+            date: formattedDate,
+            timeSlot: selectedSlot,
+            customerName: 'You',
+          });
         });
       });
       clearCart();

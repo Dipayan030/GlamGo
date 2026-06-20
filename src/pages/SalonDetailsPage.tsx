@@ -7,17 +7,18 @@ import {
   Plus,
   Star,
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { SALONS } from '../data/salons';
+import { useApp } from '../context/AppContext.jsx';
+import { adaptSalons } from '../data/adapter';
 import type { Service, ServiceCategory } from '../types';
 import { Rating } from '../components/SalonCard';
 
 const CATEGORY_ORDER: ServiceCategory[] = ['Hair', 'Skin', 'Nails', 'Makeup', 'Spa'];
 
 export function SalonDetailsPage() {
-  const { route, navigate, addToCart, cart } = useApp();
+  const { route, navigate, addToCart, cart, salons } = useApp();
+  const SALONS = useMemo(() => adaptSalons(salons), [salons]);
   const salonId = route.name === 'salon' ? route.id : '';
-  const salon = useMemo(() => SALONS.find((s) => s.id === salonId), [salonId]);
+  const salon = useMemo(() => SALONS.find((s) => s.id === salonId), [SALONS, salonId]);
   const [activeImg, setActiveImg] = useState(0);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
@@ -34,7 +35,6 @@ export function SalonDetailsPage() {
 
   const handleAdd = (svc: Service) => {
     addToCart({ salonId: salon.id, service: svc });
-    setAddedIds((p) => new Set(p).add(svc.id));
     setTimeout(() => setAddedIds((p) => { const n = new Set(p); n.delete(svc.id); return n; }), 1400);
   };
 

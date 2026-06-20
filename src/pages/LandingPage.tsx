@@ -9,18 +9,18 @@ import {
   Star,
   TrendingUp,
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { SALONS } from '../data/salons';
+import { useApp } from '../context/AppContext.jsx';
+import { adaptSalons } from '../data/adapter';
+import { NEIGHBORHOODS } from '../data/mockData.js';
 import { SalonCard } from '../components/SalonCard';
 
-const NEIGHBORHOODS = ['Bandra', 'Andheri West', 'Lower Parel', 'Juhu', 'Colaba', 'Powai'] as const;
-
 export function LandingPage() {
-  const { navigate } = useApp();
+  const { salons, navigate } = useApp();
+  const SALONS = useMemo(() => adaptSalons(salons), [salons]);
   const [query, setQuery] = useState('');
   const [neighborhood, setNeighborhood] = useState<string>('');
 
-  const featured = useMemo(() => SALONS.slice(0, 3), []);
+  const featured = useMemo(() => SALONS.slice(0, 3), [SALONS]);
   const trending = useMemo(
     () => [...SALONS].sort((a, b) => b.rating - a.rating).slice(0, 3),
     [],
