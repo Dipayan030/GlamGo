@@ -1,128 +1,188 @@
-import { useMemo, useState } from 'react';
-import { Filter, Search, SlidersHorizontal, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Filter,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  X,
+} from 'lucide-react';
 import { useApp } from '../context/AppContext.jsx';
 import { adaptSalons } from '../data/adapter';
-import type { ServiceCategory } from '../types';
+import { NEIGHBORHOODS } from '../data/mockData.js';
 import { SalonCard } from '../components/SalonCard';
 import type { Route } from '../components/routeTypes';
+import {
+  countActiveFilters,
+  DEFAULT_FILTERS,
+  filterSalons,
+  sortSalons,
+  type DiscoveryFilters,
+  type SortOption,
+} from '../utils/filterSalons';
 
-const CATEGORIES: ServiceCategory[] = ['Hair', 'Skin', 'Nails', 'Makeup', 'Spa'];
+const PRICE_TIERS = [
+  { value: 1, label: '₹', hint: 'Budget' },
+  { value: 2, label: '₹₹', hint: 'Mid-range' },
+  { value: 3, label: '₹₹₹', hint: 'Premium' },
+] as const;
+
+const RATING_PRESETS = [
+  { min: 0, max: 5, label: 'Any' },
+  { min: 4.0, max: 5, label: '4.0+' },
+  { min: 4.5, max: 5, label: '4.5+' },
+  { min: 4.7, max: 5, label: '4.7+' },
+  { min: 4.9, max: 5, label: '4.9+' },
+] as const;
 
 export function DiscoveryPage() {
-  const { route, navigate, salons } = useApp();
-  const SALONS = useMemo(() => adaptSalons(salons), [salons]);
-  const NEIGHBORHOODS = useMemo(
-    () => [...new Set(SALONS.map((s) => s.neighborhood))].sort(),
-    [SALONS],
-  );
+  const { route, navigate, salons, setSearchQuery } = useApp();
   const initial = route.name === 'search' ? route : { query: '', neighborhood: '' };
 
-  const [query, setQuery] = useState(initial.query ?? '');
-  const [neighborhood, setNeighborhood] = useState<string>(initial.neighborhood ?? '');
-  const [categories, setCategories] = useState<ServiceCategory[]>([]);
-  const [minRating, setMinRating] = useState(0);
-  const [priceMax, setPriceMax] = useState(12000);
-  const [sort, setSort] = useState<'rating' | 'price-low' | 'price-high'>('rating');
+  const [filters, setFilters] = useState<DiscoveryFilters>(() => ({
+    ...DEFAULT_FILTERS,
+    query: initial.query ?? '',
+    neighborhoods: initial.neighborhood ? [initial.neighborhood] : [],
+  }));
+  const [sort, setSort] = useState<SortOption>('rating');
   const [mobileFilters, setMobileFilters] = useState(false);
 
-  const toggleCategory = (c: ServiceCategory) =>
-    setCategories((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
+  useEffect(() => {
+    setSearchQuery(filters.query);
+  }, [filters.query, setSearchQuery]);
+
+  useEffect(() => {
+    if (!mobileFilters) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileFilters]);
+
+  const adaptedSalons = useMemo(() => adaptSalons(salons), [salons]);
+  const adaptedById = useMemo(
+    () => new Map(adaptedSalons.map((s) => [s.id, s])),
+    [adaptedSalons],
+  );
 
   const results = useMemo(() => {
-    let list = SALONS.filter((s) => {
-      if (neighborhood && s.neighborhood !== neighborhood) return false;
-      if (minRating > 0 && s.rating < minRating) return false;
-      const maxService = Math.max(...s.services.map((sv) => sv.price));
-      if (maxService > priceMax) return false;
-      if (categories.length > 0 && !s.services.some((sv) => categories.includes(sv.category))) return false;
-      if (query) {
-        const q = query.toLowerCase();
-        const hay = [s.name, s.tagline, s.neighborhood, ...s.services.map((sv) => sv.name), ...s.badges]
-          .join(' ')
-          .toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
+    const filtered = filterSalons(salons, filters);
+    return sortSalons(filtered, sort);
+  }, [salons, filters, sort]);
+
+  const activeFilterCount = countActiveFilters(filters);
+
+  const patchFilters = (patch: Partial<DiscoveryFilters>) =>
+    setFilters((prev) => ({ ...prev, ...patch }));
+
+  const toggleNeighborhood = (n: string) =>
+    patchFilters({
+      neighborhoods: filters.neighborhoods.includes(n)
+        ? filters.neighborhoods.filter((x) => x !== n)
+        : [...filters.neighborhoods, n],
     });
-    list = [...list].sort((a, b) => {
-      if (sort === 'rating') return b.rating - a.rating;
-      const aMin = Math.min(...a.services.map((sv) => sv.price));
-      const bMin = Math.min(...b.services.map((sv) => sv.price));
-      return sort === 'price-low' ? aMin - bMin : bMin - aMin;
+
+  const togglePriceTier = (tier: number) =>
+    patchFilters({
+      priceTiers: filters.priceTiers.includes(tier)
+        ? filters.priceTiers.filter((t) => t !== tier)
+        : [...filters.priceTiers, tier],
     });
-    return list;
-  }, [SALONS, query, neighborhood, categories, minRating, priceMax, sort]);
+
+  const clearFilters = () => {
+    setFilters({ ...DEFAULT_FILTERS });
+    setSort('rating');
+  };
+
+  const ratingPreset =
+    RATING_PRESETS.find(
+      (p) => p.min === filters.minRating && p.max === filters.maxRating,
+    ) ?? RATING_PRESETS[0];
 
   const filterPanel = (
     <div className="space-y-6">
+      {/* Neighborhood checkboxes */}
       <div>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-400">Neighborhood</h3>
-        <div className="space-y-1.5">
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-ink-600">
-            <input type="radio" name="nbhd" checked={!neighborhood} onChange={() => setNeighborhood('')} className="accent-brand-600" />
-            All areas
-          </label>
+        <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400">
+          <MapPin className="h-3.5 w-3.5" /> Neighborhood
+        </h3>
+        <div className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
           {NEIGHBORHOODS.map((n) => (
-            <label key={n} className="flex cursor-pointer items-center gap-2.5 text-sm text-ink-600">
-              <input type="radio" name="nbhd" checked={neighborhood === n} onChange={() => setNeighborhood(n)} className="accent-brand-600" />
+            <label
+              key={n}
+              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-1 text-sm text-ink-600 transition-colors hover:bg-ink-50"
+            >
+              <input
+                type="checkbox"
+                checked={filters.neighborhoods.includes(n)}
+                onChange={() => toggleNeighborhood(n)}
+                className="h-4 w-4 rounded accent-brand-600"
+              />
               {n}
             </label>
           ))}
         </div>
       </div>
 
+      {/* Rating range */}
       <div>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-400">Minimum rating</h3>
-        <div className="flex gap-2">
-          {[0, 4.5, 4.7, 4.9].map((r) => (
-            <button
-              key={r}
-              onClick={() => setMinRating(r)}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${minRating === r ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}
-            >
-              {r === 0 ? 'Any' : `${r}+`}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-400">Price range</h3>
-        <input
-          type="range"
-          min={500}
-          max={12000}
-          step={500}
-          value={priceMax}
-          onChange={(e) => setPriceMax(Number(e.target.value))}
-          className="w-full accent-brand-600"
-        />
-        <div className="mt-1 flex justify-between text-xs text-ink-500">
-          <span>₹500</span>
-          <span className="font-semibold text-ink-700">Up to ₹{priceMax.toLocaleString('en-IN')}</span>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-400">Service type</h3>
+        <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400">
+          <Star className="h-3.5 w-3.5" /> Rating range
+        </h3>
         <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((c) => (
+          {RATING_PRESETS.map((preset) => (
             <button
-              key={c}
-              onClick={() => toggleCategory(c)}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${categories.includes(c) ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}
+              key={preset.label}
+              type="button"
+              onClick={() =>
+                patchFilters({ minRating: preset.min, maxRating: preset.max })
+              }
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                ratingPreset.label === preset.label
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-ink-100 text-ink-600 hover:bg-ink-200'
+              }`}
             >
-              {c}
+              {preset.label}
             </button>
+          ))}
+        </div>
+        {filters.minRating > 0 && (
+          <p className="mt-2 text-xs text-ink-500">
+            Showing salons rated {filters.minRating.toFixed(1)} –{' '}
+            {filters.maxRating.toFixed(1)}
+          </p>
+        )}
+      </div>
+
+      {/* Price tier checkboxes */}
+      <div>
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-400">
+          Price tier
+        </h3>
+        <div className="space-y-1.5">
+          {PRICE_TIERS.map(({ value, label, hint }) => (
+            <label
+              key={value}
+              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-1 text-sm text-ink-600 transition-colors hover:bg-ink-50"
+            >
+              <input
+                type="checkbox"
+                checked={filters.priceTiers.includes(value)}
+                onChange={() => togglePriceTier(value)}
+                className="h-4 w-4 rounded accent-brand-600"
+              />
+              <span className="font-medium">{label}</span>
+              <span className="text-ink-400">{hint}</span>
+            </label>
           ))}
         </div>
       </div>
 
-      <button
-        onClick={() => { setNeighborhood(''); setCategories([]); setMinRating(0); setPriceMax(12000); setQuery(''); }}
-        className="btn-outline w-full"
-      >
-        Reset filters
+      <button type="button" onClick={clearFilters} className="btn-outline w-full">
+        Clear Filters
       </button>
     </div>
   );
@@ -131,56 +191,125 @@ export function DiscoveryPage() {
 
   return (
     <div className="mx-auto max-w-7xl animate-fadeIn px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      {/* Header + search */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-ink-900">Discover salons</h1>
-          <p className="mt-1 text-sm text-ink-500">{results.length} studios matching your filters</p>
+          <p className="mt-1 text-sm text-ink-500">
+            {results.length} studio{results.length !== 1 ? 's' : ''} matching your
+            filters
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
             <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search salons or services"
-              className="input pl-9 sm:w-64"
+              value={filters.query}
+              onChange={(e) => patchFilters({ query: e.target.value })}
+              placeholder="Try 'haircut', 'bridal', 'facial'…"
+              className="input w-full pl-9 sm:w-72"
+              aria-label="Search salons by category or service"
             />
           </div>
-          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="input w-auto">
-            <option value="rating">Top rated</option>
-            <option value="price-low">Price: low to high</option>
-            <option value="price-high">Price: high to low</option>
-          </select>
-          <button onClick={() => setMobileFilters(true)} className="btn-outline px-3 lg:hidden">
-            <SlidersHorizontal className="h-4 w-4" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortOption)}
+              className="input w-auto flex-1 sm:flex-none"
+              aria-label="Sort results"
+            >
+              <option value="rating">Top rated</option>
+              <option value="price-low">Price: low to high</option>
+              <option value="price-high">Price: high to low</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => setMobileFilters(true)}
+              className="btn-outline relative shrink-0 px-3 lg:hidden"
+              aria-label="Open filters"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="mt-6 flex gap-8">
-        {/* Sidebar */}
+        {/* Desktop sidebar */}
         <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-20 card p-5">
+          <div className="card sticky top-20 p-5">
             <div className="mb-4 flex items-center gap-2 text-ink-700">
-              <Filter className="h-4 w-4" /> <span className="text-sm font-semibold">Filters</span>
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-semibold">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="chip bg-brand-50 text-brand-700">
+                  {activeFilterCount} active
+                </span>
+              )}
             </div>
             {filterPanel}
           </div>
         </aside>
 
-        {/* Grid */}
+        {/* Results grid */}
         <div className="min-w-0 flex-1">
           {results.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center p-12 text-center">
-              <Search className="h-10 w-10 text-ink-300" />
-              <h3 className="mt-3 font-semibold text-ink-800">No salons found</h3>
-              <p className="mt-1 text-sm text-ink-500">Try adjusting your filters or search.</p>
+            <div className="relative overflow-hidden rounded-3xl border border-dashed border-ink-200 bg-gradient-to-b from-white via-brand-50/20 to-white px-6 py-16 text-center sm:py-20">
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand-100/40 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-amber-100/30 blur-3xl" />
+
+              <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 ring-1 ring-brand-100">
+                <Sparkles className="h-9 w-9 text-brand-500" />
+              </div>
+
+              <h3 className="relative mt-6 text-xl font-bold text-ink-900">
+                No salons found
+              </h3>
+              <p className="relative mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-500">
+                {filters.query.trim() ? (
+                  <>
+                    Nothing matched &ldquo;{filters.query.trim()}&rdquo; with your
+                    current filters. Try a different service name, category, or broaden
+                    your search.
+                  </>
+                ) : (
+                  <>
+                    No studios match your current filters. Try selecting fewer
+                    neighborhoods, lowering the rating threshold, or adding more price
+                    tiers.
+                  </>
+                )}
+              </p>
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="btn-primary relative mt-8"
+              >
+                Clear Filters
+              </button>
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {results.map((s) => (
-                <SalonCard key={s.id} salon={s} onOpen={() => navigate(goSalon(s.id))} />
-              ))}
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {results.map((raw) => {
+                const salon = adaptedById.get(raw.id);
+                if (!salon) return null;
+                return (
+                  <SalonCard
+                    key={salon.id}
+                    salon={salon}
+                    onOpen={() => navigate(goSalon(salon.id))}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -188,15 +317,43 @@ export function DiscoveryPage() {
 
       {/* Mobile filter drawer */}
       {mobileFilters && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-ink-900/40" onClick={() => setMobileFilters(false)} />
-          <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] animate-fadeUp overflow-y-auto rounded-t-3xl bg-white p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Filters</h2>
-              <button onClick={() => setMobileFilters(false)} className="btn-ghost px-2"><X className="h-5 w-5" /></button>
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+          <div
+            className="absolute inset-0 bg-ink-900/50 backdrop-blur-sm"
+            onClick={() => setMobileFilters(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute bottom-0 left-0 right-0 flex max-h-[90vh] animate-fadeUp flex-col rounded-t-3xl bg-white shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-ink-100 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-ink-900">Filters</h2>
+                {activeFilterCount > 0 && (
+                  <span className="chip bg-brand-50 text-brand-700">
+                    {activeFilterCount} active
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileFilters(false)}
+                className="btn-ghost px-2"
+                aria-label="Close filters"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            {filterPanel}
-            <button onClick={() => setMobileFilters(false)} className="btn-primary mt-6 w-full">Show {results.length} results</button>
+
+            <div className="flex-1 overflow-y-auto px-5 py-5">{filterPanel}</div>
+
+            <div className="shrink-0 border-t border-ink-100 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              <button
+                type="button"
+                onClick={() => setMobileFilters(false)}
+                className="btn-primary w-full"
+              >
+                Show {results.length} result{results.length !== 1 ? 's' : ''}
+              </button>
+            </div>
           </div>
         </div>
       )}
