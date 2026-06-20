@@ -12,10 +12,14 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext.jsx';
 import { adaptSalons } from '../data/adapter';
+import { GlassLoader, ConfirmationBadge } from '../components/GlassLoader';
+import { Confetti } from '../components/Confetti';
 
+// Hourly slots from 9:00 AM to 8:00 PM
 const TIME_SLOTS = [
-  '10:30 AM', '11:30 AM', '12:30 PM', '1:30 PM',
-  '3:00 PM', '4:00 PM', '5:00 PM', '6:30 PM', '7:30 PM',
+  '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+  '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM',
+  '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM',
 ];
 
 function formatFull(d: Date) {
@@ -26,14 +30,18 @@ export function BookingFlow() {
   const { cart, removeFromCart, cartTotal, clearCart, navigate, placeBooking, salons } = useApp();
   const SALONS = useMemo(() => adaptSalons(salons), [salons]);
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selectedDate, setSelectedDate] = useState<number>(2); // index into 14-day window
+  // local booking state: which day (0-6) and which time slot
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string>('');
-  const [paying, setPaying] = useState(false);
+  // modals
+  const [loader, setLoader] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
+  // Next 7 calendar days
   const days = useMemo(() => {
     const today = new Date();
-    return Array.from({ length: 14 }, (_, i) => {
+    today.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
       return d;
@@ -49,9 +57,11 @@ export function BookingFlow() {
     return Array.from(map.entries());
   }, [cart]);
 
-  const date = days[selectedDate];
-  const formattedDate = date.toISOString().slice(0, 10);
+  const primarySalon = SALONS.find((s) => s.id === salonGroups[0]?.[0]) ?? null;
+  const selectedDate = selectedDay != null ? days[selectedDay] : null;
+  const formattedDate = selectedDate ? selectedDate.toISOString().slice(0, 10) : '';
 
+  // ---- Empty cart ----
   if (cart.length === 0 && !confirmed) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center animate-fadeIn">
@@ -65,56 +75,18 @@ export function BookingFlow() {
     );
   }
 
-  if (confirmed) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-20 text-center animate-fadeUp">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50">
-          <CheckCircle2 className="h-8 w-8 text-green-600" />
-        </div>
-        <h1 className="mt-4 text-3xl font-bold text-ink-900">Booking confirmed!</h1>
-        <p className="mt-2 text-ink-500">
-          See you on <span className="font-semibold text-ink-700">{formatFull(date)}</span> at <span className="font-semibold text-ink-700">{selectedSlot}</span>.
-        </p>
-        <div className="mt-6 card p-5 text-left">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-400">Summary</h3>
-          <div className="space-y-2 text-sm">
-            {salonGroups.map(([salonId, items]) => {
-              const s = SALONS.find((x) => x.id === salonId);
-              return (
-                <div key={salonId}>
-                  <div className="font-semibold text-ink-800">{s?.name}</div>
-                  {items.map((c) => (
-                    <div key={c.service.id} className="flex justify-between pl-2 text-ink-600">
-                      <span>{c.service.name}</span>
-                      <span>₹{c.service.price.toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-            <div className="flex justify-between border-t border-ink-100 pt-2 font-bold text-ink-900">
-              <span>Total</span><span>₹{cartTotal.toLocaleString('en-IN')}</span>
-            </div>
-          </div>
-        </div>
-        <div className="mt-6 flex justify-center gap-3">
-          <button onClick={() => navigate({ name: 'customer' })} className="btn-primary">View my bookings</button>
-          <button onClick={() => navigate({ name: 'search' })} className="btn-outline">Book another</button>
-        </div>
-      </div>
-    );
-  }
-
   const steps = [
     { n: 1, label: 'Review', icon: ShoppingBag },
     { n: 2, label: 'Schedule', icon: Calendar },
     { n: 3, label: 'Pay', icon: CreditCard },
   ];
 
-  const canContinue = step === 1 ? cart.length > 0 : step === 2 ? !!selectedSlot : true;
+  const scheduleReady = selectedDay != null && selectedSlot !== '';
+  const canContinue = step === 1 ? cart.length > 0 : step === 2 ? scheduleReady : true;
 
-  const handlePay = () => {
-    setPaying(true);
+  const handleConfirm = () => {
+    setLoader(true);
+    // 1) Glassmorphic loader for 2 seconds
     setTimeout(() => {
       salonGroups.forEach(([salonId, items]) => {
         const s = SALONS.find((x) => x.id === salonId);
@@ -133,10 +105,13 @@ export function BookingFlow() {
         });
       });
       clearCart();
-      setPaying(false);
+      setLoader(false);
+      // 2) Show confirmation badge + confetti
       setConfirmed(true);
-    }, 1600);
+    }, 2000);
   };
+
+  const dateLabel = selectedDate ? formatFull(selectedDate) : '';
 
   return (
     <div className="mx-auto max-w-5xl animate-fadeIn px-4 py-8 sm:px-6 lg:px-8">
@@ -169,6 +144,7 @@ export function BookingFlow() {
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
         {/* Main step content */}
         <div>
+          {/* STEP 1: REVIEW */}
           {step === 1 && (
             <div className="animate-fadeUp space-y-4">
               {salonGroups.map(([salonId, items]) => {
@@ -207,40 +183,64 @@ export function BookingFlow() {
             </div>
           )}
 
+          {/* STEP 2: SCHEDULE */}
           {step === 2 && (
             <div className="animate-fadeUp">
               <div className="card p-5">
-                <h3 className="font-bold text-ink-900">Pick a date</h3>
-                <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-                  {days.map((d, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedDate(i)}
-                      className={`flex min-w-16 flex-col items-center gap-1 rounded-xl px-3 py-2.5 text-center transition-all ${selectedDate === i ? 'bg-brand-600 text-white shadow-sm' : 'bg-ink-50 text-ink-600 hover:bg-ink-100'}`}
-                    >
-                      <span className="text-[11px] font-medium uppercase">{i === 0 ? 'Today' : d.toLocaleDateString('en-IN', { weekday: 'short' })}</span>
-                      <span className="text-sm font-bold">{d.getDate()}</span>
-                    </button>
-                  ))}
+                <h3 className="font-bold text-ink-900">Pick a day</h3>
+                <p className="text-xs text-ink-500">Next 7 days</p>
+                <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
+                  {days.map((d, i) => {
+                    const isSelected = selectedDay === i;
+                    const isToday = i === 0;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedDay(i)}
+                        className={`flex flex-col items-center gap-1 rounded-xl px-2 py-3 text-center transition-all ${isSelected ? 'bg-brand-600 text-white shadow-sm' : 'bg-ink-50 text-ink-600 hover:bg-ink-100'}`}
+                      >
+                        <span className="text-[11px] font-medium uppercase tracking-wide">
+                          {isToday ? 'Today' : d.toLocaleDateString('en-IN', { weekday: 'short' })}
+                        </span>
+                        <span className="text-lg font-bold">{d.getDate()}</span>
+                        <span className={`text-[10px] ${isSelected ? 'text-brand-100' : 'text-ink-400'}`}>
+                          {d.toLocaleDateString('en-IN', { month: 'short' })}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <h3 className="mt-6 font-bold text-ink-900">Available time slots</h3>
-                <p className="text-xs text-ink-500">{formatFull(date)}</p>
-                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {TIME_SLOTS.map((slot) => (
-                    <button
-                      key={slot}
-                      onClick={() => setSelectedSlot(slot)}
-                      className={`rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${selectedSlot === slot ? 'bg-brand-600 text-white shadow-sm' : 'bg-ink-50 text-ink-700 hover:bg-ink-100'}`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
+                <div className="mt-6 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-ink-900">Pick a time</h3>
+                    <p className="text-xs text-ink-500">9:00 AM – 8:00 PM</p>
+                  </div>
+                  {selectedDate && (
+                    <span className="text-xs font-medium text-brand-600">
+                      {selectedDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                  {TIME_SLOTS.map((slot) => {
+                    const isSelected = selectedSlot === slot;
+                    return (
+                      <button
+                        key={slot}
+                        onClick={() => setSelectedSlot(slot)}
+                        className={`rounded-xl px-2 py-2.5 text-sm font-medium transition-all ${isSelected ? 'bg-brand-600 text-white shadow-sm' : 'bg-ink-50 text-ink-700 hover:bg-ink-100'}`}
+                      >
+                        {slot}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           )}
 
+          {/* STEP 3: PAYMENT */}
           {step === 3 && (
             <div className="animate-fadeUp card p-5">
               <h3 className="font-bold text-ink-900">Payment</h3>
@@ -271,17 +271,22 @@ export function BookingFlow() {
             </div>
           )}
 
+          {/* Nav buttons */}
           <div className="mt-6 flex justify-between">
             {step > 1 ? (
               <button onClick={() => setStep((s) => (s - 1) as 1 | 2)} className="btn-outline">Back</button>
             ) : <span />}
             {step < 3 ? (
-              <button onClick={() => canContinue && setStep((s) => (s + 1) as 2 | 3)} disabled={!canContinue} className="btn-primary disabled:cursor-not-allowed disabled:opacity-40">
+              <button
+                onClick={() => canContinue && setStep((s) => (s + 1) as 2 | 3)}
+                disabled={!canContinue}
+                className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 Continue <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
-              <button onClick={handlePay} disabled={paying} className="btn-primary disabled:opacity-60">
-                {paying ? 'Processing…' : `Pay ₹${cartTotal.toLocaleString('en-IN')}`}
+              <button onClick={handleConfirm} disabled={loader} className="btn-primary disabled:opacity-60">
+                Confirm Reservation
               </button>
             )}
           </div>
@@ -302,15 +307,32 @@ export function BookingFlow() {
                 <span>Total</span><span>₹{cartTotal.toLocaleString('en-IN')}</span>
               </div>
             </div>
-            {step >= 2 && selectedSlot && (
+            {step >= 2 && scheduleReady && selectedDate && (
               <div className="mt-4 rounded-xl bg-brand-50 p-3 text-sm">
-                <div className="font-semibold text-brand-700">{formatFull(date)}</div>
+                <div className="font-semibold text-brand-700">{formatFull(selectedDate)}</div>
                 <div className="text-brand-600">{selectedSlot}</div>
               </div>
             )}
           </div>
         </aside>
       </div>
+
+      {/* Glassmorphic loading modal */}
+      {loader && primarySalon && (
+        <GlassLoader message={`Securing your appointment with ${primarySalon.name}…`} />
+      )}
+
+      {/* Confirmation badge + confetti → auto route to /user/profile */}
+      {confirmed && primarySalon && (
+        <>
+          <Confetti onDone={() => navigate({ name: 'customer' })} />
+          <ConfirmationBadge
+            salonName={primarySalon.name}
+            dateLabel={dateLabel}
+            timeSlot={selectedSlot}
+          />
+        </>
+      )}
     </div>
   );
 }
