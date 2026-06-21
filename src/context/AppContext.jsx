@@ -91,7 +91,7 @@ export function AppProvider({ children }) {
       priceTier: newSalon.priceTier || '₹₹',
       image:
         newSalon.image ||
-        'https://images.unsplash.com/photo-1560066984-138dadb4c0b8?auto=format&fit=crop&w=800&h=600&q=80',
+        'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80',
       description: newSalon.description || '',
       features: newSalon.features || [],
       services: newSalon.services || [],

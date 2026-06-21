@@ -1,9 +1,6 @@
 // Unified mock database for GlamGo Mumbai.
 // Seed data: 9 highly realistic salons across real Mumbai localities.
 
-const unsplash = (id, w = 800, h = 600) =>
-  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${h}&q=80`;
-
 export const INITIAL_SALONS = [
   {
     id: 'velvet-lounge-bandra',
@@ -14,7 +11,7 @@ export const INITIAL_SALONS = [
     rating: 4.9,
     reviewCount: 412,
     priceTier: '₹₹₹',
-    image: unsplash('1560066984-138dadb4c0b8'),
+    image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80',
     description:
       'An editorial hair house on Carter Road where Lakmé-trained stylists craft precision cuts and lived-in color. Step off the seafront and into a calm, light-filled studio built for slow, considered beauty.',
     features: ['Valet Parking', 'Air Conditioned', 'Free WiFi', 'Complimentary Beverage'],
@@ -35,7 +32,7 @@ export const INITIAL_SALONS = [
     rating: 4.7,
     reviewCount: 289,
     priceTier: '₹₹',
-    image: unsplash('1540555700478-4be289fbecef'),
+    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
     description:
       'A clean-beauty spa using cold-pressed botanicals and aromatherapy oils, tucked inside Lokhandwala. Known for results-driven facials and unhurried de-stress rituals.',
     features: ['Air Conditioned', 'Vegan Products', 'Steam Room', 'Free WiFi'],
@@ -55,7 +52,7 @@ export const INITIAL_SALONS = [
     rating: 4.8,
     reviewCount: 356,
     priceTier: '₹₹₹',
-    image: unsplash('1521590832167-7bcbfa71d497'),
+    image: 'https://images.unsplash.com/photo-1521590832167-7bcbfa71d497?auto=format&fit=crop&w=600&q=80',
     description:
       'A members-style hair house off Juhu Tara Road, led by Sassoon-trained master colourists. Appointment-only, with a quiet bar and a focus on architectural, low-maintenance color.',
     features: ['Valet Parking', 'Air Conditioned', 'Members Lounge', 'Master Colourist'],
@@ -75,7 +72,7 @@ export const INITIAL_SALONS = [
     rating: 4.5,
     reviewCount: 198,
     priceTier: '₹',
-    image: unsplash('1633681926022-84e2dd43fa6d'),
+    image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80',
     description:
       'A walk-in friendly express bar near the Gateway, built for fast blowdrys, on-the-go manicures, and last-minute party glam. No appointment needed, friendly prices, quick turnarounds.',
     features: ['Air Conditioned', 'Walk-in Friendly', 'Express Service'],
@@ -95,7 +92,7 @@ export const INITIAL_SALONS = [
     rating: 4.9,
     reviewCount: 521,
     priceTier: '₹₹₹',
-    image: unsplash('1570172619644-dfd03ed5d881'),
+    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80',
     description:
       'A dermatologist-led med-spa inside High Street Phoenix, specialising in chemical peels, laser, and clinical facials. Every treatment is supervised by an in-house dermatologist for safe, visible results.',
     features: ['Dermatologist Led', 'Air Conditioned', 'Laser Certified', 'Free WiFi'],
@@ -115,7 +112,7 @@ export const INITIAL_SALONS = [
     rating: 4.6,
     reviewCount: 164,
     priceTier: '₹₹',
-    image: unsplash('1604654898228-8b5ad2973173'),
+    image: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=600&q=80',
     description:
       'A calm, lakeside studio in Hiranandani known for long-wear nail art and signature brow architecture. Soft lighting, herbal tea, and artists who treat every lash and line with intention.',
     features: ['Air Conditioned', 'Nail Art', 'Brow Studio', 'Free WiFi'],
@@ -135,7 +132,7 @@ export const INITIAL_SALONS = [
     rating: 4.8,
     reviewCount: 273,
     priceTier: '₹₹₹',
-    image: unsplash('1560869625316-8a5b9e4d4c7b'),
+    image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=600&q=80',
     description:
       'A dedicated bridal atelier in Malad specialising in HD bridal makeup, draping, and multi-day wedding looks. Each bridal package includes a pre-trial, skin prep plan, and on-location option.',
     features: ['Air Conditioned', 'Bridal Suite', 'On-location Available', 'Free WiFi'],
@@ -155,7 +152,7 @@ export const INITIAL_SALONS = [
     rating: 4.4,
     reviewCount: 311,
     priceTier: '₹',
-    image: unsplash('1522335789203-aabd1fc54bc9'),
+    image: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=600&q=80',
     description:
       'A neighbourhood family salon near Shivaji Park offering honest pricing and quick services for all ages. From kids cuts to festive facials, a reliable everyday choice for the community.',
     features: ['Air Conditioned', 'Family Friendly', 'Kids Cuts', 'Walk-in Friendly'],
@@ -175,7 +172,7 @@ export const INITIAL_SALONS = [
     rating: 4.9,
     reviewCount: 387,
     priceTier: '₹₹₹',
-    image: unsplash('1544161515-4ab6ce6db874'),
+    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
     description:
       'An ocean-facing wellness spa at Worli Sea Face offering deep-tissue therapies, hot stone rituals, and couples suites. Quiet rooms, trained therapists, and a salt-water relaxation lounge.',
     features: ['Sea View', 'Couples Suite', 'Steam & Sauna', 'Valet Parking'],
