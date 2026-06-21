@@ -47,3 +47,8 @@ npm install
 
 # Start the development server
 npm run dev
+
+```
+
+## 💡 Acknowledgements
+Built during the AI Startup Buildathon 2026 – Beauty Salon Marketplace Challenge. Special thanks to the AI developer community for the tools that made this rapid iteration possible.
